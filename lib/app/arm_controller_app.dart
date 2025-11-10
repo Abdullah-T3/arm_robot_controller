@@ -9,6 +9,8 @@ import '../features/bluetooth/data/bluetooth_repository.dart';
 import '../features/bluetooth/cubit/bluetooth_cubit.dart';
 import '../features/arm_control/cubit/arm_control_cubit.dart';
 import '../core/theme/app_theme.dart';
+import '../features/settings/cubit/settings_cubit.dart';
+import '../features/settings/cubit/settings_state.dart';
 
 class ArmControllerApp extends StatelessWidget {
   const ArmControllerApp({super.key});
@@ -16,6 +18,7 @@ class ArmControllerApp extends StatelessWidget {
   // Keep a single router instance to avoid resetting to initialLocation
   // when the widget tree rebuilds (e.g., on orientation changes).
   static final GoRouter _router = AppRouter().appRouter;
+  static bool _autoConnectAttempted = false;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +35,9 @@ class ArmControllerApp extends StatelessWidget {
             BlocProvider(
               create: (_) => ArmControlCubit(GetIt.I<BluetoothRepository>()),
             ),
+            BlocProvider(
+              create: (_) => SettingsCubit(),
+            ),
           ],
           child: BlocListener<BluetoothCubit, BluetoothState>(
             listener: (context, state) {
@@ -39,11 +45,28 @@ class ArmControllerApp extends StatelessWidget {
                 ArmControllerApp._router.go('/scan');
               }
             },
-            child: MaterialApp.router(
-              debugShowCheckedModeBanner: false,
-              title: 'Robot Arm Controller',
-              theme: AppTheme.darkTheme,
-              routerConfig: _router,
+            child: BlocBuilder<SettingsCubit, SettingsState>(
+              builder: (context, settings) {
+                // Attempt auto-connect once on startup if enabled
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                  if (!_autoConnectAttempted && settings.autoConnect && settings.lastDeviceAddress != null) {
+                    final bluetoothCubit = context.read<BluetoothCubit>();
+                    if (bluetoothCubit.state is! BluetoothConnected) {
+                      try {
+                        await bluetoothCubit.connectToLastSavedDevice();
+                      } catch (_) {}
+                    }
+                    _autoConnectAttempted = true;
+                  }
+                });
+
+                return MaterialApp.router(
+                  debugShowCheckedModeBanner: false,
+                  title: 'Robot Arm Controller',
+                  theme: settings.darkMode ? AppTheme.darkTheme : AppTheme.lightTheme,
+                  routerConfig: _router,
+                );
+              },
             ),
           ),
         );

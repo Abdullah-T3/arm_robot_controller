@@ -48,13 +48,16 @@ class _PresetsView extends StatelessWidget {
       body: BlocConsumer<PresetsCubit, PresetsState>(
         listener: (context, state) {
           if (state is PresetsLoaded && state.message != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message!)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message!)));
           }
           if (state is PresetsError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         },
@@ -81,7 +84,9 @@ class _PresetsView extends StatelessWidget {
           }
           final presets = (state as PresetsLoaded).presets;
           if (presets.isEmpty) {
-            return const Center(child: Text('No presets yet. Tap + to create.'));
+            return const Center(
+              child: Text('No presets yet. Tap + to create.'),
+            );
           }
           return ListView.builder(
             padding: EdgeInsets.all(16.r),
@@ -92,7 +97,9 @@ class _PresetsView extends StatelessWidget {
                 margin: EdgeInsets.only(bottom: 12.r),
                 padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 12.w),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withOpacity(0.06),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surface.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Row(
@@ -101,28 +108,31 @@ class _PresetsView extends StatelessWidget {
                       width: 40.r,
                       height: 40.r,
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.15),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.save,
-                          color: Theme.of(context).colorScheme.primary),
+                      child: Icon(
+                        Icons.save,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     SizedBox(width: 12.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(p.name, style: Theme.of(context).textTheme.bodyLarge),
+                          Text(
+                            p.name,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
                           SizedBox(height: 4.h),
                           Text(
                             _formatPositions(p.positions),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: Colors.grey),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                           ),
                         ],
                       ),
@@ -136,7 +146,10 @@ class _PresetsView extends StatelessWidget {
                     ElevatedButton(
                       onPressed: () => _applyPreset(context, p),
                       style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 8.h,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10.r),
                         ),
@@ -146,7 +159,7 @@ class _PresetsView extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.delete),
                       onPressed: () => _showDeleteConfirmation(context, p),
-                    )
+                    ),
                   ],
                 ),
               );
@@ -159,17 +172,20 @@ class _PresetsView extends StatelessWidget {
 
   String _formatPositions(List<double> pos) {
     final labels = ['Base', 'Shoulder', 'Elbow', 'Wrist', 'Gripper'];
-    return List.generate(pos.length, (i) => '${labels[i]}: ${pos[i].round()}°').join(', ');
+    return List.generate(
+      pos.length,
+      (i) => '${labels[i]}: ${pos[i].round()}°',
+    ).join(', ');
   }
 
   void _applyPreset(BuildContext context, Preset p) {
     // Map to ArmControlCubit model
     context.read<ArmControlCubit>().loadPreset(
-          ServoPreset(name: p.name, positions: p.positions),
-        );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Applied ${p.name}')),
+      ServoPreset(name: p.name, positions: p.positions),
     );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Applied ${p.name}')));
   }
 
   Future<void> _showCreatePresetDialog(BuildContext context) async {
@@ -179,6 +195,7 @@ class _PresetsView extends StatelessWidget {
 
     await showDialog(
       context: context,
+      useRootNavigator: false,
       builder: (ctx) {
         return AlertDialog(
           title: const Text('Create Preset'),
@@ -197,7 +214,10 @@ class _PresetsView extends StatelessWidget {
                   );
                   return;
                 }
-                await ctx.read<PresetsCubit>().createPreset(name, positions);
+                await context.read<PresetsCubit>().createPreset(
+                  name,
+                  positions,
+                );
                 ctx.pop();
               },
               child: const Text('Save'),
@@ -208,10 +228,14 @@ class _PresetsView extends StatelessWidget {
     );
   }
 
-  Future<void> _showEditPresetDialog(BuildContext context, Preset preset) async {
+  Future<void> _showEditPresetDialog(
+    BuildContext context,
+    Preset preset,
+  ) async {
     final nameController = TextEditingController(text: preset.name);
     await showDialog(
       context: context,
+      useRootNavigator: false,
       builder: (ctx) {
         return AlertDialog(
           title: const Text('Edit Preset'),
@@ -230,7 +254,10 @@ class _PresetsView extends StatelessWidget {
                   );
                   return;
                 }
-                await ctx.read<PresetsCubit>().updatePreset(id: preset.id, name: name);
+                await context.read<PresetsCubit>().updatePreset(
+                  id: preset.id,
+                  name: name,
+                );
                 ctx.pop();
               },
               child: const Text('Save'),
@@ -241,23 +268,26 @@ class _PresetsView extends StatelessWidget {
     );
   }
 
-  Future<void> _showDeleteConfirmation(BuildContext context, Preset preset) async {
+  Future<void> _showDeleteConfirmation(
+    BuildContext context,
+    Preset preset,
+  ) async {
     return showDialog(
       context: context,
-      builder: (context) {
+      useRootNavigator: false,
+      builder: (ctx) {
         return AlertDialog(
           title: const Text('Delete Preset?'),
-          content: Text('Delete "${preset.name}"? This action cannot be undone.'),
+          content: Text(
+            'Delete "${preset.name}"? This action cannot be undone.',
+          ),
           actions: [
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () => context.pop(),
-            ),
+            TextButton(child: const Text('Cancel'), onPressed: () => ctx.pop()),
             TextButton(
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
               onPressed: () async {
                 await context.read<PresetsCubit>().deletePreset(preset.id);
-                context.pop();
+                ctx.pop();
               },
             ),
           ],

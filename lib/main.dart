@@ -3,17 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app/di/injection.dart';
-import 'app/arm_controller.dart';
+import 'app/arm_controller_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Lock the app to portrait by default
-  await SystemChrome.setPreferredOrientations(
-    const [DeviceOrientation.portraitUp],
-  );
+  await SystemChrome.setPreferredOrientations(const [
+    DeviceOrientation.portraitUp,
+  ]);
   await Hive.initFlutter();
-  // Open a box for presets storage
   await Hive.openBox('presets');
+  await Hive.openBox('settings');
   configureDependencies();
   runApp(const ArmControllerApp());
 }

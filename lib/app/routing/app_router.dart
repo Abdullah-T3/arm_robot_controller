@@ -6,11 +6,19 @@ import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/presets/presentation/presets_screen.dart';
 import '../../features/arm_control/presentation/arm_3d_viewer_screen.dart';
 import '../../core/responsive/orientation_lock.dart';
+import '../splash_screen.dart';
 
 class AppRouter {
   final GoRouter appRouter = GoRouter(
-    initialLocation: '/scan',
+    initialLocation: '/splash',
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const OrientationLock(
+          orientations: [DeviceOrientation.portraitUp],
+          child: SplashScreen(),
+        ),
+      ),
       GoRoute(
         path: '/scan',
         builder: (context, state) => const OrientationLock(

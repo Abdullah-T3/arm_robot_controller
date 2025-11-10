@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 part 'bluetooth_state.dart';
 
@@ -80,6 +81,13 @@ class BluetoothCubit extends Cubit<BluetoothState> {
           .connect(device.address, sppUuid)
           .timeout(const Duration(seconds: 10));
 
+      // Persist last connected device for auto-connect
+      try {
+        final box = Hive.box('settings');
+        box.put('lastDeviceAddress', device.address);
+        box.put('lastDeviceName', device.name);
+      } catch (_) {}
+
       emit(BluetoothConnected(device));
     } on TimeoutException {
       // Try to clean up any half-open socket and report a user-friendly error
@@ -132,6 +140,36 @@ class BluetoothCubit extends Cubit<BluetoothState> {
       }
     } catch (e) {
       emit(BluetoothError(e.toString()));
+    }
+  }
+
+  /// Attempts to auto-connect to the last saved device (if present in paired devices).
+  Future<void> connectToLastSavedDevice() async {
+    if (_connectingInProgress) return;
+    try {
+      final box = Hive.box('settings');
+      final address = box.get('lastDeviceAddress') as String?;
+      if (address == null) return;
+
+      // Ensure permissions and discover paired devices
+      try {
+        await _bluetooth.initPermissions();
+      } catch (_) {}
+
+      final devices = await _bluetooth.getPairedDevices();
+      bluetooth.Device? match;
+      for (final d in devices) {
+        if (d.address == address) {
+          match = d;
+          break;
+        }
+      }
+
+      if (match != null) {
+        await connectToDevice(match);
+      }
+    } catch (_) {
+      // Swallow errors to avoid blocking app startup
     }
   }
 }

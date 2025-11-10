@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bluetooth/cubit/bluetooth_cubit.dart';
+import '../cubit/settings_cubit.dart';
+import '../cubit/settings_state.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -35,9 +37,9 @@ class SettingsScreen extends StatelessWidget {
               ),
               SwitchListTile(
                 title: const Text('Auto-connect on startup'),
-                value: true, // Replace with actual value
+                value: context.watch<SettingsCubit>().state.autoConnect,
                 onChanged: (value) {
-                  // Handle auto-connect setting
+                  context.read<SettingsCubit>().setAutoConnect(value);
                 },
               ),
             ],
@@ -48,34 +50,32 @@ class SettingsScreen extends StatelessWidget {
             children: [
               SwitchListTile(
                 title: const Text('Dark Mode'),
-                value: true, // Replace with actual theme mode
+                value: context.watch<SettingsCubit>().state.darkMode,
                 onChanged: (value) {
-                  // Handle theme mode change
+                  context.read<SettingsCubit>().setDarkMode(value);
                 },
               ),
             ],
           ),
           _modernSection(
             context,
-            title: 'ABOUT',
+            title: 'CONTRIBUTORS',
             children: [
-              ListTile(
-                title: const Text('App Version'),
-                trailing: const Text('1.0.2'),
-              ),
-              ListTile(
-                title: const Text('Privacy Policy'),
-                trailing: Icon(Icons.arrow_forward_ios, size: 16.r),
-                onTap: () {
-                  // Navigate to privacy policy
-                },
-              ),
-              ListTile(
-                title: const Text('Terms of Service'),
-                trailing: Icon(Icons.arrow_forward_ios, size: 16.r),
-                onTap: () {
-                  // Navigate to terms of service
-                },
+              ...const [
+                'Abdullah ahmed hassan',
+                'Abdelrahman yehia ibrahim ',
+                'Merna Bahgat Naeem',
+                'Demiana samy maawad',
+                'Mariam',
+                'Hamed mohamed hamed',
+                'Jassmn wael abdelaziz',
+                'Omar Sayed Mahmoud',
+                'Mohamed hatem',
+                'Ismail mohamed ismail',
+              ].map(
+                (name) => ListTile(
+                  title: Text(name),
+                ),
               ),
             ],
           ),

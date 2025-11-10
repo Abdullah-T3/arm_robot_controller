@@ -18,18 +18,10 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
   @override
   void initState() {
     super.initState();
-    // Lock this screen to landscape orientations only
-    SystemChrome.setPreferredOrientations(
-      const [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight],
-    );
   }
 
   @override
   void dispose() {
-    // Restore orientation allowances when leaving this screen
-    SystemChrome.setPreferredOrientations(
-      const [DeviceOrientation.portraitUp],
-    );
     super.dispose();
   }
 
@@ -42,6 +34,11 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
           IconButton(
             icon: const Icon(Icons.bluetooth),
             onPressed: () => context.go('/scan'),
+          ),
+          IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -81,15 +78,46 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                     ),
                   ),
                   SizedBox(height: 16.h),
-                  _slider(context, ranges[0].label, 0, ranges[0].min, ranges[0].max),
+                  _slider(
+                    context,
+                    ranges[0].label,
+                    0,
+                    ranges[0].min,
+                    ranges[0].max,
+                  ),
                   SizedBox(height: 8.h),
-                  _slider(context, ranges[1].label, 1, ranges[1].min, ranges[1].max),
+                  _slider(
+                    context,
+                    ranges[1].label,
+                    1,
+                    ranges[1].min,
+                    ranges[1].max,
+                  ),
                   SizedBox(height: 8.h),
-                  _slider(context, ranges[2].label, 2, ranges[2].min, ranges[2].max),
+                  _slider(
+                    context,
+                    ranges[2].label,
+                    2,
+                    ranges[2].min,
+                    ranges[2].max,
+                  ),
                   SizedBox(height: 8.h),
-                  _slider(context, ranges[3].label, 3, ranges[3].min, ranges[3].max),
+                  _slider(
+                    context,
+                    ranges[3].label,
+                    3,
+                    ranges[3].min,
+                    ranges[3].max,
+                  ),
                   SizedBox(height: 8.h),
-                  _slider(context, ranges[4].label, 4, ranges[4].min, ranges[4].max, units: '°'),
+                  _slider(
+                    context,
+                    ranges[4].label,
+                    4,
+                    ranges[4].min,
+                    ranges[4].max,
+                    units: '°',
+                  ),
 
                   SizedBox(height: 16.h),
                   Row(
@@ -100,7 +128,8 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                             // Ask for preset name then save
                             showDialog(
                               context: context,
-                              builder: (context) {
+                              useRootNavigator: false,
+                              builder: (ctx) {
                                 final controller = TextEditingController();
                                 return AlertDialog(
                                   title: const Text("Save Position"),
@@ -112,15 +141,20 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context),
+                                      onPressed: () => ctx.pop(),
                                       child: const Text("Cancel"),
                                     ),
                                     TextButton(
                                       onPressed: () {
-                                        context
-                                            .read<ArmControlCubit>()
-                                            .saveCurrentPosition(controller.text);
-                                        Navigator.pop(context);
+                                        final name = controller.text.trim();
+                                        if (name.isEmpty) {
+                                          ScaffoldMessenger.of(ctx).showSnackBar(
+                                            const SnackBar(content: Text('Name is required')),
+                                          );
+                                          return;
+                                        }
+                                        context.read<ArmControlCubit>().saveCurrentPosition(name);
+                                        ctx.pop();
                                       },
                                       child: const Text("Save"),
                                     ),
@@ -138,9 +172,72 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                           onPressed: () => context.push('/presets'),
                           child: const Text('View Presets'),
                         ),
-                      )
+                      ),
                     ],
                   ),
+
+                  SizedBox(height: 24.h),
+                  Text(
+                    'Saved Positions',
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  if (state.savedPositions.isEmpty)
+                    Text(
+                      'No saved positions yet. Use "Save Position" to add one.',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: Colors.grey),
+                    )
+                  else
+                    Column(
+                      children: [
+                        for (final p in state.savedPositions)
+                          Container(
+                            margin: EdgeInsets.only(bottom: 8.r),
+                            padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 12.w),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    p.name,
+                                    style: Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Apply',
+                                  icon: const Icon(Icons.play_arrow),
+                                  onPressed: () {
+                                    context.read<ArmControlCubit>().loadPreset(p);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Applied ${p.name}')),
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  tooltip: 'Delete',
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                  onPressed: () {
+                                    context.read<ArmControlCubit>().deletePreset(p);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Deleted ${p.name}')),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                 ],
               );
 
@@ -182,10 +279,7 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                     : SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            vis,
-                            controlsNarrow,
-                          ],
+                          children: [vis, controlsNarrow],
                         ),
                       ),
               );
@@ -215,9 +309,8 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
           min: min,
           max: max,
           units: units,
-          onChanged: (v) => context
-              .read<ArmControlCubit>()
-              .updateServoPosition(index, v),
+          onChanged: (v) =>
+              context.read<ArmControlCubit>().updateServoPosition(index, v),
         );
       },
     );
@@ -239,4 +332,3 @@ const List<_JointRange> _jointRanges = <_JointRange>[
   _JointRange('Wrist (Pitch)', 0, 180),
   _JointRange('Gripper (Open)', 0, 60),
 ];
-
