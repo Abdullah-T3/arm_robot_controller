@@ -6,7 +6,7 @@ import 'package:crypto/crypto.dart';
 class Preset extends Equatable {
   final String id;
   final String name;
-  final List<double> positions; // expected length: 5
+  final List<double> positions; // expected length: 4
   final int version;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -63,17 +63,19 @@ class Preset extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'positions': positions,
-        'version': version,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'checksum': checksum,
-      };
+    'id': id,
+    'name': name,
+    'positions': positions,
+    'version': version,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'checksum': checksum,
+  };
 
   static Preset fromJson(Map<String, dynamic> json) {
-    final positions = (json['positions'] as List).map((e) => (e as num).toDouble()).toList();
+    final positions = (json['positions'] as List)
+        .map((e) => (e as num).toDouble())
+        .toList();
     final id = json['id'] as String;
     final name = json['name'] as String;
     final version = json['version'] as int;
@@ -107,5 +109,13 @@ class Preset extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, positions, version, createdAt, updatedAt, checksum];
+  List<Object?> get props => [
+    id,
+    name,
+    positions,
+    version,
+    createdAt,
+    updatedAt,
+    checksum,
+  ];
 }

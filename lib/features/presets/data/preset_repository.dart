@@ -6,8 +6,15 @@ import '../models/preset.dart';
 
 abstract class PresetRepository {
   Future<List<Preset>> listPresets();
-  Future<Preset> savePreset({required String name, required List<double> positions});
-  Future<Preset> updatePreset({required String id, String? name, List<double>? positions});
+  Future<Preset> savePreset({
+    required String name,
+    required List<double> positions,
+  });
+  Future<Preset> updatePreset({
+    required String id,
+    String? name,
+    List<double>? positions,
+  });
   Future<void> deletePreset({required String id});
   Future<Preset?> loadPresetById(String id);
   Future<bool> existsByName(String name);
@@ -52,7 +59,10 @@ class HivePresetRepository implements PresetRepository {
   }
 
   @override
-  Future<Preset> savePreset({required String name, required List<double> positions}) async {
+  Future<Preset> savePreset({
+    required String name,
+    required List<double> positions,
+  }) async {
     _validatePositions(positions);
     final now = DateTime.now();
     final id = _generateId();
@@ -78,7 +88,11 @@ class HivePresetRepository implements PresetRepository {
   }
 
   @override
-  Future<Preset> updatePreset({required String id, String? name, List<double>? positions}) async {
+  Future<Preset> updatePreset({
+    required String id,
+    String? name,
+    List<double>? positions,
+  }) async {
     final existing = await loadPresetById(id);
     if (existing == null) {
       throw StateError('Preset not found');
@@ -123,8 +137,8 @@ class HivePresetRepository implements PresetRepository {
   }
 
   void _validatePositions(List<double> positions) {
-    if (positions.length != 5) {
-      throw ArgumentError('Expected 5 servo positions');
+    if (positions.length != 4) {
+      throw ArgumentError('Expected 4 servo positions');
     }
     for (final v in positions) {
       if (v < 0 || v > 180) {

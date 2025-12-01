@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:arm_robot_controller/features/arm_control/cubit/arm_control_cubit.dart';
+import '../providers/arm_control_provider.dart';
+import '../models/arm_control_state.dart';
 import 'widgets/arm_visualizer.dart';
 import 'widgets/hover_slider.dart';
 
-class ArmControlScreen extends StatefulWidget {
+class ArmControlScreen extends ConsumerStatefulWidget {
   const ArmControlScreen({super.key});
 
   @override
-  State<ArmControlScreen> createState() => _ArmControlScreenState();
+  ConsumerState<ArmControlScreen> createState() => _ArmControlScreenState();
 }
 
-class _ArmControlScreenState extends State<ArmControlScreen> {
+class _ArmControlScreenState extends ConsumerState<ArmControlScreen> {
   @override
   void initState() {
     super.initState();
@@ -42,8 +42,9 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
           ),
         ],
       ),
-      body: BlocBuilder<ArmControlCubit, ArmControlState>(
-        builder: (context, state) {
+      body: Consumer(
+        builder: (context, ref, child) {
+          final state = ref.watch(armControlProvider);
           final ranges = _jointRanges;
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -108,14 +109,6 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                     3,
                     ranges[3].min,
                     ranges[3].max,
-                  ),
-                  SizedBox(height: 8.h),
-                  _slider(
-                    context,
-                    ranges[4].label,
-                    4,
-                    ranges[4].min,
-                    ranges[4].max,
                     units: '°',
                   ),
 
@@ -148,12 +141,18 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                                       onPressed: () {
                                         final name = controller.text.trim();
                                         if (name.isEmpty) {
-                                          ScaffoldMessenger.of(ctx).showSnackBar(
-                                            const SnackBar(content: Text('Name is required')),
+                                          ScaffoldMessenger.of(
+                                            ctx,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Name is required'),
+                                            ),
                                           );
                                           return;
                                         }
-                                        context.read<ArmControlCubit>().saveCurrentPosition(name);
+                                        ref
+                                            .read(armControlProvider.notifier)
+                                            .saveCurrentPosition(name);
                                         ctx.pop();
                                       },
                                       child: const Text("Save"),
@@ -189,10 +188,9 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                   if (state.savedPositions.isEmpty)
                     Text(
                       'No saved positions yet. Use "Save Position" to add one.',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: Colors.grey),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                     )
                   else
                     Column(
@@ -200,9 +198,14 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                         for (final p in state.savedPositions)
                           Container(
                             margin: EdgeInsets.only(bottom: 8.r),
-                            padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 12.w),
+                            padding: EdgeInsets.symmetric(
+                              vertical: 10.h,
+                              horizontal: 12.w,
+                            ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface.withOpacity(0.06),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surface.withOpacity(0.06),
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                             child: Row(
@@ -210,26 +213,39 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
                                 Expanded(
                                   child: Text(
                                     p.name,
-                                    style: Theme.of(context).textTheme.bodyLarge,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyLarge,
                                   ),
                                 ),
                                 IconButton(
                                   tooltip: 'Apply',
                                   icon: const Icon(Icons.play_arrow),
                                   onPressed: () {
-                                    context.read<ArmControlCubit>().loadPreset(p);
+                                    ref
+                                        .read(armControlProvider.notifier)
+                                        .loadPreset(p);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Applied ${p.name}')),
+                                      SnackBar(
+                                        content: Text('Applied ${p.name}'),
+                                      ),
                                     );
                                   },
                                 ),
                                 IconButton(
                                   tooltip: 'Delete',
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                  ),
                                   onPressed: () {
-                                    context.read<ArmControlCubit>().deletePreset(p);
+                                    ref
+                                        .read(armControlProvider.notifier)
+                                        .deletePreset(p);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Deleted ${p.name}')),
+                                      SnackBar(
+                                        content: Text('Deleted ${p.name}'),
+                                      ),
                                     );
                                   },
                                 ),
@@ -298,10 +314,9 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
     double max, {
     String units = '°',
   }) {
-    return BlocBuilder<ArmControlCubit, ArmControlState>(
-      buildWhen: (prev, curr) =>
-          prev.servoPositions[index] != curr.servoPositions[index],
-      builder: (context, state) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final state = ref.watch(armControlProvider);
         final value = state.servoPositions[index];
         return HoverSlider(
           label: label,
@@ -309,8 +324,9 @@ class _ArmControlScreenState extends State<ArmControlScreen> {
           min: min,
           max: max,
           units: units,
-          onChanged: (v) =>
-              context.read<ArmControlCubit>().updateServoPosition(index, v),
+          onChanged: (v) => ref
+              .read(armControlProvider.notifier)
+              .updateServoPosition(index, v),
         );
       },
     );
@@ -326,9 +342,20 @@ class _JointRange {
 
 // Physical constraints for each joint
 const List<_JointRange> _jointRanges = <_JointRange>[
-  _JointRange('Base (Yaw)', 0, 180),
-  _JointRange('Shoulder (Pitch)', 10, 170),
-  _JointRange('Elbow (Pitch)', 0, 180),
-  _JointRange('Wrist (Pitch)', 0, 180),
-  _JointRange('Gripper (Open)', 0, 60),
+  _JointRange('Base (Yaw)', ArmControlState.baseMin, ArmControlState.baseMax),
+  _JointRange(
+    'Shoulder (Pitch)',
+    ArmControlState.shoulderMin,
+    ArmControlState.shoulderMax,
+  ),
+  _JointRange(
+    'Wrist (Pitch)',
+    ArmControlState.wristMin,
+    ArmControlState.wristMax,
+  ),
+  _JointRange(
+    'Gripper (Open)',
+    ArmControlState.gripperMin,
+    ArmControlState.gripperMax,
+  ),
 ];

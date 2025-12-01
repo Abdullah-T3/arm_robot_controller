@@ -1,39 +1,35 @@
-import 'package:equatable/equatable.dart';
-
-class SettingsState extends Equatable {
+class SettingsState {
   final bool darkMode;
   final bool autoConnect;
   final String? lastDeviceAddress;
   final String? lastDeviceName;
+  final bool isLoading;
+  final String? error;
 
   const SettingsState({
-    required this.darkMode,
-    required this.autoConnect,
+    this.darkMode = true,
+    this.autoConnect = false,
     this.lastDeviceAddress,
     this.lastDeviceName,
+    this.isLoading = false,
+    this.error,
   });
-
-  factory SettingsState.initial() => const SettingsState(
-        darkMode: true,
-        autoConnect: false,
-        lastDeviceAddress: null,
-        lastDeviceName: null,
-      );
 
   SettingsState copyWith({
     bool? darkMode,
     bool? autoConnect,
     String? lastDeviceAddress,
     String? lastDeviceName,
+    bool? isLoading,
+    String? error,
   }) {
     return SettingsState(
       darkMode: darkMode ?? this.darkMode,
       autoConnect: autoConnect ?? this.autoConnect,
       lastDeviceAddress: lastDeviceAddress ?? this.lastDeviceAddress,
       lastDeviceName: lastDeviceName ?? this.lastDeviceName,
+      isLoading: isLoading ?? this.isLoading,
+      error: error ?? this.error,
     );
   }
-
-  @override
-  List<Object?> get props => [darkMode, autoConnect, lastDeviceAddress, lastDeviceName];
 }

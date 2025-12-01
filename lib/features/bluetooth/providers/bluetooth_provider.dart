@@ -1,30 +1,41 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:equatable/equatable.dart';
-import 'package:injectable/injectable.dart';
-import 'package:bluetooth_classic/bluetooth_classic.dart';
-import 'package:bluetooth_classic/models/device.dart' as bluetooth;
 import 'dart:async';
 import 'dart:io';
-import 'package:permission_handler/permission_handler.dart';
+
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:bluetooth_classic/bluetooth_classic.dart';
+import 'package:bluetooth_classic/models/device.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'bluetooth_state.dart';
+import '../models/bluetooth_state.dart';
 
-@injectable
-class BluetoothCubit extends Cubit<BluetoothState> {
-  final BluetoothClassic _bluetooth;
+part 'bluetooth_provider.g.dart';
+
+// Provider for BluetoothClassic instance
+@riverpod
+BluetoothClassic bluetoothClassic(Ref ref) {
+  return BluetoothClassic();
+}
+
+@riverpod
+class Bluetooth extends _$Bluetooth {
   bool _connectingInProgress = false;
 
-  BluetoothCubit(this._bluetooth) : super(BluetoothInitial());
+  @override
+  BluetoothState build() {
+    return const BluetoothInitial();
+  }
+
+  BluetoothClassic get _bluetooth => ref.read(bluetoothClassicProvider);
 
   Future<void> startScanning() async {
-    emit(BluetoothScanning());
+    state = const BluetoothScanning();
     try {
       final devices = await _bluetooth.getPairedDevices();
-      emit(BluetoothAvailable(devices));
+      state = BluetoothAvailable(devices);
     } catch (e) {
-      emit(BluetoothError(e.toString()));
+      state = BluetoothError(e.toString());
     }
   }
 
@@ -38,21 +49,21 @@ class BluetoothCubit extends Cubit<BluetoothState> {
         await _bluetooth.initPermissions();
       } catch (_) {}
 
-      emit(BluetoothScanning());
+      state = const BluetoothScanning();
 
       // If Bluetooth is off or unavailable, many plugins throw on this call.
       final devices = await _bluetooth.getPairedDevices();
-      emit(BluetoothAvailable(devices));
+      state = BluetoothAvailable(devices);
     } catch (e) {
       // Treat any failure here as Bluetooth unavailable/off for UX simplicity.
-      emit(BluetoothOff());
+      state = const BluetoothOff();
     }
   }
 
-  Future<void> connectToDevice(bluetooth.Device device) async {
+  Future<void> connectToDevice(Device device) async {
     if (_connectingInProgress) return;
     _connectingInProgress = true;
-    emit(const BluetoothConnecting());
+    state = const BluetoothConnecting();
     try {
       // Ensure runtime permissions (Android 12+ requires BLUETOOTH_CONNECT)
       try {
@@ -61,18 +72,20 @@ class BluetoothCubit extends Cubit<BluetoothState> {
       if (Platform.isAndroid) {
         final status = await Permission.bluetoothConnect.request();
         if (!status.isGranted) {
-          emit(const BluetoothError('Bluetooth Connect permission denied'));
+          state = const BluetoothError('Bluetooth Connect permission denied');
           return;
         }
       }
 
       // If already connected, disconnect first and give the adapter a short breather
-      if (state is BluetoothConnected) {
-        try {
-          await _bluetooth.disconnect();
-        } catch (_) {}
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
+      state.whenOrNull(
+        connected: (_) async {
+          try {
+            await _bluetooth.disconnect();
+          } catch (_) {}
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+      );
 
       const sppUuid = "00001101-0000-1000-8000-00805f9b34fb";
 
@@ -88,15 +101,15 @@ class BluetoothCubit extends Cubit<BluetoothState> {
         box.put('lastDeviceName', device.name);
       } catch (_) {}
 
-      emit(BluetoothConnected(device));
+      state = BluetoothConnected(device);
     } on TimeoutException {
       // Try to clean up any half-open socket and report a user-friendly error
       try {
         await _bluetooth.disconnect();
       } catch (_) {}
-      emit(const BluetoothError('Connection timed out. Please try again.'));
+      state = const BluetoothError('Connection timed out. Please try again.');
     } catch (e) {
-      emit(BluetoothError(e.toString()));
+      state = BluetoothError(e.toString());
     } finally {
       _connectingInProgress = false;
     }
@@ -105,21 +118,22 @@ class BluetoothCubit extends Cubit<BluetoothState> {
   Future<void> disconnect() async {
     try {
       await _bluetooth.disconnect();
-      emit(const BluetoothDisconnected());
+      state = const BluetoothDisconnected();
     } catch (e) {
-      emit(BluetoothError(e.toString()));
+      state = BluetoothError(e.toString());
     }
   }
 
   Future<void> getBluetoothState() async {
     try {
-      final state = await _bluetooth.onDeviceStatusChanged();
-      if (state == 0) {
-        emit(BluetoothOff());
+      final btState = await _bluetooth.onDeviceStatusChanged();
+      if (btState == 0) {
+        state = const BluetoothOff();
+      } else {
+        state = const BluetoothOn();
       }
-      emit(BluetoothOn());
     } catch (e) {
-      emit(BluetoothError(e.toString()));
+      state = BluetoothError(e.toString());
     }
   }
 
@@ -139,7 +153,7 @@ class BluetoothCubit extends Cubit<BluetoothState> {
         await openAppSettings();
       }
     } catch (e) {
-      emit(BluetoothError(e.toString()));
+      state = BluetoothError(e.toString());
     }
   }
 
@@ -157,7 +171,7 @@ class BluetoothCubit extends Cubit<BluetoothState> {
       } catch (_) {}
 
       final devices = await _bluetooth.getPairedDevices();
-      bluetooth.Device? match;
+      Device? match;
       for (final d in devices) {
         if (d.address == address) {
           match = d;
