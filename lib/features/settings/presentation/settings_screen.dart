@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../bluetooth/cubit/bluetooth_cubit.dart';
-import '../cubit/settings_cubit.dart';
-import '../cubit/settings_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../bluetooth/providers/bluetooth_provider.dart';
+import '../../bluetooth/models/bluetooth_state.dart';
+import '../providers/settings_provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -21,25 +21,29 @@ class SettingsScreen extends StatelessWidget {
             children: [
               ListTile(
                 title: const Text('Connected Device'),
-                subtitle: BlocBuilder<BluetoothCubit, BluetoothState>(
-                  builder: (context, state) {
+                subtitle: Consumer(
+                  builder: (context, ref, child) {
+                    final state = ref.watch(bluetoothProvider);
                     return Text(
-                      state is BluetoothConnected
-                          ? state.device.name ?? 'Unknown Device'
-                          : 'Not Connected',
+                      state.whenOrNull(
+                            connected: (device) =>
+                                device.name ?? 'Unknown Device',
+                          ) ??
+                          'Not Connected',
                     );
                   },
                 ),
                 trailing: TextButton(
-                  onPressed: () => context.read<BluetoothCubit>().disconnect(),
+                  onPressed: () =>
+                      ref.read(bluetoothProvider.notifier).disconnect(),
                   child: const Text('Disconnect'),
                 ),
               ),
               SwitchListTile(
                 title: const Text('Auto-connect on startup'),
-                value: context.watch<SettingsCubit>().state.autoConnect,
+                value: ref.watch(settingsProvider).autoConnect,
                 onChanged: (value) {
-                  context.read<SettingsCubit>().setAutoConnect(value);
+                  ref.read(settingsProvider.notifier).setAutoConnect(value);
                 },
               ),
             ],
@@ -50,9 +54,9 @@ class SettingsScreen extends StatelessWidget {
             children: [
               SwitchListTile(
                 title: const Text('Dark Mode'),
-                value: context.watch<SettingsCubit>().state.darkMode,
+                value: ref.watch(settingsProvider).darkMode,
                 onChanged: (value) {
-                  context.read<SettingsCubit>().setDarkMode(value);
+                  ref.read(settingsProvider.notifier).setDarkMode(value);
                 },
               ),
             ],
@@ -72,11 +76,7 @@ class SettingsScreen extends StatelessWidget {
                 'Omar Sayed Mahmoud',
                 'Mohamed hatem',
                 'Ismail mohamed ismail',
-              ].map(
-                (name) => ListTile(
-                  title: Text(name),
-                ),
-              ),
+              ].map((name) => ListTile(title: Text(name))),
             ],
           ),
         ],
@@ -106,8 +106,11 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _modernSection(BuildContext context,
-      {required String title, required List<Widget> children}) {
+  Widget _modernSection(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
     return Card(
       elevation: 0,
       margin: EdgeInsets.only(bottom: 12.r),

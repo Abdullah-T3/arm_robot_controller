@@ -9,7 +9,7 @@ class AnimatedArmVisualizer extends StatefulWidget {
     this.curve = Curves.easeInOut,
   });
 
-  /// Angles list: [base, shoulder, elbow, wrist, gripper]
+  /// Angles list: [base, shoulder, wrist, gripper]
   final List<double> angles;
   final Duration duration;
   final Curve curve;
@@ -101,7 +101,7 @@ class _ArmPainter extends CustomPainter {
     required this.baseColor,
   });
 
-  final List<double> angles; // [base, shoulder, elbow, wrist, gripper]
+  final List<double> angles; // [base, shoulder, wrist, gripper]
   final Color armColor;
   final Color jointColor;
   final Color baseColor;
@@ -116,17 +116,15 @@ class _ArmPainter extends CustomPainter {
 
     // Segment lengths as proportions of viewport (in pixel units)
     final l1 = h * 0.22; // base to shoulder (vertical column)
-    final l2 = h * 0.20; // shoulder to elbow
-    final l3 = h * 0.16; // elbow to wrist
-    final gr = h * 0.10; // gripper length (taller)
+    final l2 = h * 0.28; // shoulder to wrist (longer main arm)
+    final gr = h * 0.12; // gripper length
 
     // Map degrees to radians; center around neutral pose
     double deg(double d) => d * math.pi / 180.0;
     final yaw = deg(angles[0] - 90); // Base yaw (horizontal rotation)
     final shPitch = deg(angles[1] - 90); // Shoulder pitch
-    final elPitch = deg(angles[2] - 90); // Elbow pitch
-    final wrPitch = deg(angles[3] - 90); // Wrist pitch
-    final thGrip = deg(angles[4]);
+    final wrPitch = deg(angles[2] - 90); // Wrist pitch
+    final thGrip = deg(angles[3]);
 
     // Helper: 3D direction from yaw (around Y) and pitch (from horizontal)
     // Using spherical coords: pitch = 0 is horizontal, +90° is up
@@ -152,22 +150,22 @@ class _ArmPainter extends CustomPainter {
 
     // Forward kinematics in 3D
     final o3 = Offset3(0, 0, 0);
-    final p1_3 = o3 + Offset3(0, l1, 0);
+    final p1_3 = o3 + Offset3(0, l1, 0); // Shoulder pivot
+
     final d2 = _dir(yaw, shPitch);
-    final p2_3 = p1_3 + d2 * l2;
-    final d3 = _dir(yaw, shPitch + elPitch);
-    final p3_3 = p2_3 + d3 * l3;
-    final d4 = _dir(yaw, shPitch + elPitch + wrPitch);
-    final p4_3 = p3_3 + d4 * gr;
+    final p2_3 = p1_3 + d2 * l2; // Wrist pivot
+
+    final d3 = _dir(yaw, shPitch + wrPitch);
+    final p3_3 = p2_3 + d3 * gr; // Gripper tip base
 
     // Project to 2D canvas space
     final p1 = _proj(p1_3);
     final p2 = _proj(p2_3);
     final p3 = _proj(p3_3);
-    final p4 = _proj(p4_3);
+
     final pGripDir2D = Offset(
-      (_proj(p3_3 + d4 * 10).dx - _proj(p3_3).dx),
-      (_proj(p3_3 + d4 * 10).dy - _proj(p3_3).dy),
+      (_proj(p3_3 + d3 * 10).dx - _proj(p3_3).dx),
+      (_proj(p3_3 + d3 * 10).dy - _proj(p3_3).dy),
     ).normalize();
 
     // Paints
@@ -246,25 +244,23 @@ class _ArmPainter extends CustomPainter {
     }
 
     // Segments
-    drawSegment(origin, p1);
-    drawSegment(p1, p2);
-    drawSegment(p2, p3);
-    drawSegment(p3, p4);
+    drawSegment(origin, p1); // Base column
+    drawSegment(p1, p2); // Main arm
+    drawSegment(p2, p3); // Wrist segment
 
     // Joints
     canvas.drawCircle(p1, 10, jointPaint);
     canvas.drawCircle(p2, 9, jointPaint);
-    canvas.drawCircle(p3, 9, jointPaint);
 
     // Gripper in a Y-like shape
     final gripAngle = thGrip.clamp(0, deg(90));
     final gripLen = gr * 0.9; // longer fingers for taller look
     final ortho = Offset(-pGripDir2D.dy, pGripDir2D.dx);
     final spread = math.sin(gripAngle) * (h * 0.065); // much wider spread
-    final fingerA = p4 + (pGripDir2D * gripLen) + (ortho * spread);
-    final fingerB = p4 + (pGripDir2D * gripLen) - (ortho * spread);
-    canvas.drawLine(p4, fingerA, gripPaint);
-    canvas.drawLine(p4, fingerB, gripPaint);
+    final fingerA = p3 + (pGripDir2D * gripLen) + (ortho * spread);
+    final fingerB = p3 + (pGripDir2D * gripLen) - (ortho * spread);
+    canvas.drawLine(p3, fingerA, gripPaint);
+    canvas.drawLine(p3, fingerB, gripPaint);
   }
 
   @override
